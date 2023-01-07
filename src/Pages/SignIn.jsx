@@ -15,11 +15,13 @@ import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
+import { FacebookRounded } from "@mui/icons-material";
 
 const theme = createTheme();
 
 export default function SignIn() {
   const [err, setErr] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
@@ -33,6 +35,50 @@ export default function SignIn() {
     } catch (err) {
       setErr(true);
     }
+  };
+
+  const signInWithGoogle = () => {
+    signInWithPopup(auth, googleProvider)
+      .then((result) => {
+        console.log(result);
+        // The signed-in user info.
+        const user = result.user;
+        setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          displayName: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+        });
+        setDoc(doc(db, "userChats", user.uid), {});
+        navigate("/");
+      })
+      .catch((error) => {
+        setErr(true);
+        setLoading(false);
+        console.log(error);
+      });
+  };
+
+  const signInWithFacebook = () => {
+    setLoading(true);
+
+    signInWithPopup(auth, facebookProvider)
+      .then((result) => {
+        const user = result.user;
+        setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          displayName: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+        });
+        setDoc(doc(db, "userChats", user.uid), {});
+        navigate("/");
+      })
+      .catch((error) => {
+        setErr(true);
+        setLoading(false);
+        console.log(error);
+      });
   };
 
   return (
@@ -85,9 +131,41 @@ export default function SignIn() {
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}>
+              sx={{ mt: 2, mb: 1 }}>
               Sign In
             </Button>
+
+            <Typography component="center" variant="overline" className=" py-1">
+              or continue with
+            </Typography>
+
+            <Grid item xs={12} className="grid grid-cols-2 gap-2 pb-2">
+              <Button
+                 onClick={signInWithFacebook}
+                type="submit"
+                fullWidth
+                variant="contained"
+                disabled={loading}>
+                <FacebookRounded className="  absolute left-4" />
+                Facebook
+              </Button>
+
+              <Button
+                style={{ "backgroundColor": "black" }}
+                onClick={signInWithGoogle}
+                type="submit"
+                fullWidth
+                variant="contained"
+                disabled={loading}>
+                <img
+                  src="/assets/google.png"
+                  alt=""
+                  className=" w-7 absolute left-4 "
+                />
+                Google
+              </Button>
+            </Grid>
+
             {err && <span>Something went wrong</span>}
             <Grid container>
               <Grid item xs>

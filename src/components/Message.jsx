@@ -8,31 +8,24 @@ const Message = ({ message }) => {
 
   const ref = useRef();
 
-  
-
   useEffect(() => {
     ref.current?.scrollIntoView({ behavior: "smooth" });
   }, [message]);
 
   let convertTimestamp = (timestamp) => {
-    
     let date = timestamp.toDate();
     let mm = date.getMonth();
     let dd = date.getDate();
     let yyyy = date.getFullYear();
-  
-    date = mm + '/' + dd + '/' + yyyy;
+
+    date = mm + "/" + dd + "/" + yyyy;
     return date;
-  }
-
-  
-
+  };
 
   return (
     <div
       ref={ref}
-      className={`message ${message.senderId === currentUser.uid && "owner"}`}
-    >
+      className={`message ${message.senderId === currentUser.uid && "owner"}`}>
       <div className="messageInfo">
         <img
           src={
@@ -42,9 +35,7 @@ const Message = ({ message }) => {
           }
           alt=""
         />
-        <span>{
-         convertTimestamp(message.date)
-          }</span>
+        <span>{convertTimestamp(message.date)}</span>
       </div>
       <div className="messageContent">
         <p>{message.text}</p>

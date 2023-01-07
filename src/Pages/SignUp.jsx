@@ -12,13 +12,24 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { auth, db, storage } from "../firebase";
+import {
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  updateProfile,
+} from "firebase/auth";
+import {
+  auth,
+  db,
+  facebookProvider,
+  googleProvider,
+  storage,
+} from "../firebase";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import Add from "../img/addAvatar.png";
 import { doc, setDoc } from "firebase/firestore";
 import { MuiFileInput } from "mui-file-input";
 import { useNavigate, Link } from "react-router-dom";
+import { FacebookRounded } from "@mui/icons-material";
 
 const theme = createTheme();
 
@@ -74,6 +85,50 @@ export default function SignUp() {
       setErr(true);
       setLoading(false);
     }
+  };
+
+  const signInWithGoogle = () => {
+    setLoading(true);
+    signInWithPopup(auth, googleProvider)
+      .then((result) => {
+        // The signed-in user info.
+        const user = result.user;
+        setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          displayName: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+        });
+        setDoc(doc(db, "userChats", user.uid), {});
+        navigate("/");
+      })
+      .catch((error) => {
+        setErr(true);
+        setLoading(false);
+        console.log(error);
+      });
+  };
+
+  const signInWithFacebook = () => {
+    setLoading(true);
+
+    signInWithPopup(auth, facebookProvider)
+      .then((result) => {
+        const user = result.user;
+        setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          displayName: user.displayName,
+          email: user.email,
+          photoURL: user.photoURL,
+        });
+        setDoc(doc(db, "userChats", user.uid), {});
+        navigate("/");
+      })
+      .catch((error) => {
+        setErr(true);
+        setLoading(false);
+        console.log(error);
+      });
   };
 
   return (
@@ -150,14 +205,46 @@ export default function SignUp() {
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              sx={{ mt: 3, mb: 1 }}
               disabled={loading}>
               Sign Up
             </Button>
+
+            <Typography component="center" variant="overline" className=" py-1">
+              or continue with
+            </Typography>
+
+            <Grid item xs={12} className="grid grid-cols-2 gap-2">
+              <Button
+                 onClick={signInWithFacebook}
+                type="submit"
+                fullWidth
+                variant="contained"
+                disabled={loading}>
+                <FacebookRounded className="  absolute left-4" />
+                Facebook
+              </Button>
+
+              <Button
+                style={{ "backgroundColor": "black" }}
+                onClick={signInWithGoogle}
+                type="submit"
+                fullWidth
+                variant="contained"
+                disabled={loading}>
+                <img
+                  src="/assets/google.png"
+                  alt=""
+                  className=" w-7 absolute left-4 "
+                />
+                Google
+              </Button>
+            </Grid>
+
             {loading && "Uploading and compressing the image please wait..."}
             {err && <span> something went Wrong try again </span>}
             <Grid container justifyContent="flex-end">
-              <Grid item>
+              <Grid item sx={{ marginY: 1 }}>
                 <LLink href="/signin" variant="body2">
                   Already have an account? Sign in
                 </LLink>
@@ -175,5 +262,34 @@ export default function SignUp() {
                 <label className="flex items-center" htmlFor="file">
                   <img className="w-8 mx-2" src={Add} />
                   <span className="opacity-75 font-sans">Add an avatar</span>
-                </label> */
+                </label> 
+
+
+
+
+                <Button
+               onClick={signInWithFacebook}
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{ mb: 1 }}
+              disabled={loading}>
+              <FacebookRounded className="  w-7 absolute left-4" />
+              Continue with Facebook
+            </Button>
+
+            <Button
+              onClick={signInWithGoogle}
+              type="submit"
+              fullWidth
+              variant="contained"
+              disabled={loading}>
+              <img
+                src="/assets/google.png"
+                alt=""
+                className=" w-7 absolute left-4 "
+              />
+              Continue with Google
+            </Button>
+            */
 }
