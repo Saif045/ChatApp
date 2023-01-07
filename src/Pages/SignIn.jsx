@@ -12,10 +12,11 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase";
+import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { auth, db, facebookProvider, googleProvider } from "../firebase";
 import { useNavigate } from "react-router-dom";
 import { FacebookRounded } from "@mui/icons-material";
+import { doc, setDoc } from "firebase/firestore";
 
 const theme = createTheme();
 
@@ -40,7 +41,6 @@ export default function SignIn() {
   const signInWithGoogle = () => {
     signInWithPopup(auth, googleProvider)
       .then((result) => {
-        console.log(result);
         // The signed-in user info.
         const user = result.user;
         setDoc(doc(db, "users", user.uid), {
