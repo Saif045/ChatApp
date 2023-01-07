@@ -18,7 +18,6 @@ const Messages = () => {
     };
   }, [data.chatId]);
 
-
   return (
     <div className="messages">
       {messages.map((m) => (

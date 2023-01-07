@@ -8,9 +8,25 @@ const Message = ({ message }) => {
 
   const ref = useRef();
 
+  
+
   useEffect(() => {
     ref.current?.scrollIntoView({ behavior: "smooth" });
   }, [message]);
+
+  let convertTimestamp = (timestamp) => {
+    
+    let date = timestamp.toDate();
+    let mm = date.getMonth();
+    let dd = date.getDate();
+    let yyyy = date.getFullYear();
+  
+    date = mm + '/' + dd + '/' + yyyy;
+    return date;
+  }
+
+  
+
 
   return (
     <div
@@ -26,7 +42,9 @@ const Message = ({ message }) => {
           }
           alt=""
         />
-        <span>just now</span>
+        <span>{
+         convertTimestamp(message.date)
+          }</span>
       </div>
       <div className="messageContent">
         <p>{message.text}</p>

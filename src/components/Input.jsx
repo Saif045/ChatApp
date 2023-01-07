@@ -22,6 +22,9 @@ const Input = () => {
   const { data } = useContext(ChatContext);
 
   const handleSend = async () => {
+    if (!text) {
+      alert("enter a valid message");
+    }
     if (img) {
       const storageRef = ref(storage, uuid());
 
@@ -45,7 +48,7 @@ const Input = () => {
           });
         }
       );
-    } else {
+    } else  {
       await updateDoc(doc(db, "chats", data.chatId), {
         messages: arrayUnion({
           id: uuid(),
@@ -72,6 +75,7 @@ const Input = () => {
 
     setText("");
     setImg(null);
+  
   };
   return (
     <div className="input">
@@ -80,18 +84,20 @@ const Input = () => {
         placeholder="Type something..."
         onChange={(e) => setText(e.target.value)}
         value={text}
+        required
       />
+
       <div className="send">
-        <img src={Attach} alt="" />
         <input
+          className="hidden"
           type="file"
           id="file"
           onChange={(e) => setImg(e.target.files[0])}
         />
-        <label htmlFor="file">
-          <img src={Img} alt="" />
+        <label className="w-8  z-50" htmlFor="file">
+          <img src={Img} />
         </label>
-        <button onClick={handleSend}>Send</button>
+        <button className="rounded-br-xl" onClick={handleSend}>Send</button>
       </div>
     </div>
   );
