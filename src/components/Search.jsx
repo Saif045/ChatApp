@@ -12,12 +12,15 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { AuthContext } from "../context/AuthContext";
+import { ChatContext } from "../context/ChatContext";
 const Search = () => {
   const [username, setUsername] = useState("");
   const [user, setUser] = useState(null);
   const [err, setErr] = useState(false);
 
   const { currentUser } = useContext(AuthContext);
+  const { dispatch } = useContext(ChatContext);
+
   useEffect(() => {
     const initialChats = async () => {
       const q = query(
@@ -44,6 +47,7 @@ const Search = () => {
       currentUser.uid > user.uid
         ? currentUser.uid + user.uid
         : user.uid + currentUser.uid;
+        dispatch({ type: "CHANGE_USER", payload: user });
     try {
       const res = await getDoc(doc(db, "chats", combinedId));
 
