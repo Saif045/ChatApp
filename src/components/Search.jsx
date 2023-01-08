@@ -37,7 +37,6 @@ const Search = () => {
     initialChats();
   }, [username]);
 
-  console.log(user);
 
   const handleSelect = async () => {
     //check whether the group(chats in firestore) exists, if not create
@@ -81,7 +80,7 @@ const Search = () => {
       <div className="searchForm">
         <input
           type="text"
-          placeholder="Find a user"
+          placeholder="Find a user try saif"
           onChange={(e) => setUsername(e.target.value)}
           value={username}
         />
