@@ -26,18 +26,52 @@ import {
 } from "../firebase";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import Add from "../img/addAvatar.png";
-import { doc, setDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+} from "firebase/firestore";
 import { MuiFileInput } from "mui-file-input";
 import { useNavigate, Link } from "react-router-dom";
 import { FacebookRounded } from "@mui/icons-material";
+import { AuthContext } from "../context/AuthContext";
+import { ChatContext } from "../context/ChatContext";
 
 const theme = createTheme();
 
 export default function SignUp() {
   const [err, setErr] = React.useState(false);
   const [file, setFile] = React.useState(null);
+  const [saif, setSaif] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const navigate = useNavigate();
+  const { currentUser } = React.useContext(AuthContext);
+  const { dispatch } = React.useContext(ChatContext);
+
+  React.useEffect(() => {
+    const getSaif = async () => {
+      const q = query(
+        collection(db, "users"),
+        where("displayName", "==", "saif")
+      );
+      try {
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach((doc) => {
+          setSaif(doc.data());
+        });
+      } catch (err) {
+        setErr(true);
+      }
+    };
+
+    getSaif();
+  }, []);
 
   const handleSubmit = async (event) => {
     setLoading(true);
@@ -70,36 +104,69 @@ export default function SignUp() {
               email,
               photoURL: downloadURL,
             });
-
-            //create empty user chats on firestore
-            await setDoc(doc(db, "userChats", res.user.uid), {});
-            navigate("/");
-          } catch (err) {
-            console.log(err);
-            setErr(true);
-            setLoading(false);
-          }
+          } catch (err) {}
         });
       });
+
+      await createChatDocuments(res);
+
+      navigate("/");
     } catch (err) {
       setErr(true);
       setLoading(false);
     }
   };
 
+  const createChatDocuments = async (res) => {
+    try {
+      dispatch({ type: "CHANGE_USER", payload: saif });
+      const combinedId =
+        res.user.uid > saif?.uid
+          ? res.user.uid + saif?.uid
+          : saif?.uid + res.user.uid;
+      const response = await getDoc(doc(db, "chats", combinedId));
+
+      if (!response.exists()) {
+        //create a chat in chats collection
+        await setDoc(doc(db, "chats", combinedId), { messages: [] });
+
+        await setDoc(doc(db, "userChats", res.user.uid), {});
+        await updateDoc(doc(db, "userChats", res.user.uid), {
+          [combinedId + ".userInfo"]: {
+            uid: saif?.uid,
+            displayName: saif?.displayName,
+            photoURL: saif?.photoURL,
+          },
+          [combinedId + ".date"]: serverTimestamp(),
+        });
+
+        await setDoc(doc(db, "userChats", saif?.uid), {});
+        await updateDoc(doc(db, "userChats", saif?.uid), {
+          [combinedId + ".userInfo"]: {
+            uid: res.user.uid,
+            displayName: res.user.displayName,
+            photoURL: res.user.photoURL,
+          },
+          [combinedId + ".date"]: serverTimestamp(),
+        });
+      }
+    } catch (err) {}
+  };
+
   const signInWithGoogle = () => {
     setLoading(true);
     signInWithPopup(auth, googleProvider)
-      .then((result) => {
+      .then(async (res) => {
         // The signed-in user info.
-        const user = result.user;
-        setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          displayName: user.displayName,
-          email: user.email,
-          photoURL: user.photoURL,
+
+        await setDoc(doc(db, "users", res.user.uid), {
+          uid: res.user.uid,
+          displayName: res.user.displayName,
+          email: res.user.email,
+          photoURL: res.user.photoURL,
         });
-        setDoc(doc(db, "userChats", user.uid), {});
+
+        await createChatDocuments(res);
         navigate("/");
       })
       .catch((error) => {
@@ -113,15 +180,17 @@ export default function SignUp() {
     setLoading(true);
 
     signInWithPopup(auth, facebookProvider)
-      .then((result) => {
-        const user = result.user;
-        setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          displayName: user.displayName,
-          email: user.email,
-          photoURL: user.photoURL,
+      .then(async (res) => {
+        // The signed-in user info.
+
+        await setDoc(doc(db, "users", res.user.uid), {
+          uid: res.user.uid,
+          displayName: res.user.displayName,
+          email: res.user.email,
+          photoURL: res.user.photoURL,
         });
-        setDoc(doc(db, "userChats", user.uid), {});
+
+        await createChatDocuments(res);
         navigate("/");
       })
       .catch((error) => {
@@ -216,7 +285,7 @@ export default function SignUp() {
 
             <Grid item xs={12} className="grid grid-cols-2 gap-2">
               <Button
-                 onClick={signInWithFacebook}
+                onClick={signInWithFacebook}
                 type="submit"
                 fullWidth
                 variant="contained"
@@ -226,7 +295,7 @@ export default function SignUp() {
               </Button>
 
               <Button
-                style={{ "backgroundColor": "black" }}
+                style={{ backgroundColor: "black" }}
                 onClick={signInWithGoogle}
                 type="submit"
                 fullWidth
@@ -255,41 +324,4 @@ export default function SignUp() {
       </Container>
     </ThemeProvider>
   );
-}
-
-{
-  /** <input type="file" id="file" label="file" className="hidden" />
-                <label className="flex items-center" htmlFor="file">
-                  <img className="w-8 mx-2" src={Add} />
-                  <span className="opacity-75 font-sans">Add an avatar</span>
-                </label> 
-
-
-
-
-                <Button
-               onClick={signInWithFacebook}
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mb: 1 }}
-              disabled={loading}>
-              <FacebookRounded className="  w-7 absolute left-4" />
-              Continue with Facebook
-            </Button>
-
-            <Button
-              onClick={signInWithGoogle}
-              type="submit"
-              fullWidth
-              variant="contained"
-              disabled={loading}>
-              <img
-                src="/assets/google.png"
-                alt=""
-                className=" w-7 absolute left-4 "
-              />
-              Continue with Google
-            </Button>
-            */
 }
