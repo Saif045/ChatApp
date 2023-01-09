@@ -26,7 +26,7 @@ const Chats = () => {
   const handleSelect = (u) => {
     dispatch({ type: "CHANGE_USER", payload: u });
   };
-  return (
+  return chats &&  (
     <div className="chats">
       {Object.entries(chats)?.map((chat) => (
         <div

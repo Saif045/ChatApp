@@ -3,8 +3,6 @@ import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import CssBaseline from "@mui/material/CssBaseline";
 import TextField from "@mui/material/TextField";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Checkbox from "@mui/material/Checkbox";
 import { Link as LLink } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import Box from "@mui/material/Box";
@@ -12,66 +10,28 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import {
-  createUserWithEmailAndPassword,
-  signInWithPopup,
-  updateProfile,
-} from "firebase/auth";
-import {
-  auth,
-  db,
-  facebookProvider,
-  googleProvider,
-  storage,
-} from "../firebase";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import Add from "../img/addAvatar.png";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
-} from "firebase/firestore";
+import { createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { auth, facebookProvider, googleProvider } from "../firebase";
 import { MuiFileInput } from "mui-file-input";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { FacebookRounded } from "@mui/icons-material";
 import { AuthContext } from "../context/AuthContext";
 import { ChatContext } from "../context/ChatContext";
+import {
+  createChatDocuments,
+  createUserDocuments,
+  UploadProfile,
+} from "../components/useSignDocs";
 
 const theme = createTheme();
 
 export default function SignUp() {
   const [err, setErr] = React.useState(false);
   const [file, setFile] = React.useState(null);
-  const [saif, setSaif] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
-  const navigate = useNavigate();
-  const { currentUser } = React.useContext(AuthContext);
+  const { saif } = React.useContext(AuthContext);
   const { dispatch } = React.useContext(ChatContext);
-
-  React.useEffect(() => {
-    const getSaif = async () => {
-      const q = query(
-        collection(db, "users"),
-        where("displayName", "==", "saif")
-      );
-      try {
-        const querySnapshot = await getDocs(q);
-        querySnapshot.forEach((doc) => {
-          setSaif(doc.data());
-        });
-      } catch (err) {
-        setErr(true);
-      }
-    };
-
-    getSaif();
-  }, []);
+  const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
     setLoading(true);
@@ -86,29 +46,10 @@ export default function SignUp() {
       const res = await createUserWithEmailAndPassword(auth, email, password);
 
       //Create a unique image name
-      const date = new Date().getTime();
-      const storageRef = ref(storage, `${displayName + date}`);
+       UploadProfile(displayName, email, file, res);
 
-      await uploadBytesResumable(storageRef, file).then(() => {
-        getDownloadURL(storageRef).then(async (downloadURL) => {
-          try {
-            //Update profile
-            await updateProfile(res.user, {
-              displayName,
-              photoURL: downloadURL,
-            });
-            //create user on firestore
-            await setDoc(doc(db, "users", res.user.uid), {
-              uid: res.user.uid,
-              displayName,
-              email,
-              photoURL: downloadURL,
-            });
-          } catch (err) {}
-        });
-      });
-
-      await createChatDocuments(res);
+      await createChatDocuments(res, saif);
+      dispatch({ type: "CHANGE_USER", payload: saif });
 
       navigate("/");
     } catch (err) {
@@ -117,80 +58,13 @@ export default function SignUp() {
     }
   };
 
-  const createChatDocuments = async (res) => {
-    try {
-      dispatch({ type: "CHANGE_USER", payload: saif });
-      const combinedId =
-        res.user.uid > saif?.uid
-          ? res.user.uid + saif?.uid
-          : saif?.uid + res.user.uid;
-      const response = await getDoc(doc(db, "chats", combinedId));
-
-      if (!response.exists()) {
-        //create a chat in chats collection
-        await setDoc(doc(db, "chats", combinedId), { messages: [] });
-
-        await setDoc(doc(db, "userChats", res.user.uid), {});
-        await updateDoc(doc(db, "userChats", res.user.uid), {
-          [combinedId + ".userInfo"]: {
-            uid: saif?.uid,
-            displayName: saif?.displayName,
-            photoURL: saif?.photoURL,
-          },
-          [combinedId + ".date"]: serverTimestamp(),
-        });
-
-        await setDoc(doc(db, "userChats", saif?.uid), {});
-        await updateDoc(doc(db, "userChats", saif?.uid), {
-          [combinedId + ".userInfo"]: {
-            uid: res.user.uid,
-            displayName: res.user.displayName,
-            photoURL: res.user.photoURL,
-          },
-          [combinedId + ".date"]: serverTimestamp(),
-        });
-      }
-    } catch (err) {}
-  };
-
-  const signInWithGoogle = () => {
+  const signInWithProvider = (Provider) => {
     setLoading(true);
-    signInWithPopup(auth, googleProvider)
+    signInWithPopup(auth, Provider)
       .then(async (res) => {
-        // The signed-in user info.
-
-        await setDoc(doc(db, "users", res.user.uid), {
-          uid: res.user.uid,
-          displayName: res.user.displayName,
-          email: res.user.email,
-          photoURL: res.user.photoURL,
-        });
-
-        await createChatDocuments(res);
-        navigate("/");
-      })
-      .catch((error) => {
-        setErr(true);
-        setLoading(false);
-        console.log(error);
-      });
-  };
-
-  const signInWithFacebook = () => {
-    setLoading(true);
-
-    signInWithPopup(auth, facebookProvider)
-      .then(async (res) => {
-        // The signed-in user info.
-
-        await setDoc(doc(db, "users", res.user.uid), {
-          uid: res.user.uid,
-          displayName: res.user.displayName,
-          email: res.user.email,
-          photoURL: res.user.photoURL,
-        });
-
-        await createChatDocuments(res);
+        await createUserDocuments(res);
+        await createChatDocuments(res, saif);
+        dispatch({ type: "CHANGE_USER", payload: saif });
         navigate("/");
       })
       .catch((error) => {
@@ -285,7 +159,7 @@ export default function SignUp() {
 
             <Grid item xs={12} className="grid grid-cols-2 gap-2">
               <Button
-                onClick={signInWithFacebook}
+                onClick={() => signInWithProvider(facebookProvider)}
                 type="submit"
                 fullWidth
                 variant="contained"
@@ -296,7 +170,7 @@ export default function SignUp() {
 
               <Button
                 style={{ backgroundColor: "black" }}
-                onClick={signInWithGoogle}
+                onClick={() => signInWithProvider(googleProvider)}
                 type="submit"
                 fullWidth
                 variant="contained"
