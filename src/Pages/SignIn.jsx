@@ -13,16 +13,23 @@ import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
-import { auth, db, facebookProvider, googleProvider } from "../firebase";
+import { auth, facebookProvider, googleProvider } from "../firebase";
 import { useNavigate } from "react-router-dom";
 import { FacebookRounded } from "@mui/icons-material";
-import { doc, setDoc } from "firebase/firestore";
+import { AuthContext } from "../context/AuthContext";
+import { ChatContext } from "../context/ChatContext";
+import {
+  createChatDocuments,
+  createUserDocuments,
+} from "../components/useSignDocs";
 
 const theme = createTheme();
 
 export default function SignIn() {
   const [err, setErr] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const { saif } = React.useContext(AuthContext);
+  const { dispatch } = React.useContext(ChatContext);
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
@@ -38,40 +45,13 @@ export default function SignIn() {
     }
   };
 
-  const signInWithGoogle = () => {
-    signInWithPopup(auth, googleProvider)
-      .then((result) => {
-        // The signed-in user info.
-        const user = result.user;
-        setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          displayName: user.displayName,
-          email: user.email,
-          photoURL: user.photoURL,
-        });
-        setDoc(doc(db, "userChats", user.uid), {});
-        navigate("/");
-      })
-      .catch((error) => {
-        setErr(true);
-        setLoading(false);
-        console.log(error);
-      });
-  };
-
-  const signInWithFacebook = () => {
+  const signInWithProvider = (Provider) => {
     setLoading(true);
-
-    signInWithPopup(auth, facebookProvider)
-      .then((result) => {
-        const user = result.user;
-        setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          displayName: user.displayName,
-          email: user.email,
-          photoURL: user.photoURL,
-        });
-        setDoc(doc(db, "userChats", user.uid), {});
+    signInWithPopup(auth, Provider)
+      .then(async (res) => {
+        await createUserDocuments(res);
+        await createChatDocuments(res, saif);
+        dispatch({ type: "CHANGE_USER", payload: saif });
         navigate("/");
       })
       .catch((error) => {
@@ -141,7 +121,7 @@ export default function SignIn() {
 
             <Grid item xs={12} className="grid grid-cols-2 gap-2 pb-2">
               <Button
-                 onClick={signInWithFacebook}
+                onClick={() => signInWithProvider(facebookProvider)}
                 type="submit"
                 fullWidth
                 variant="contained"
@@ -151,8 +131,8 @@ export default function SignIn() {
               </Button>
 
               <Button
-                style={{ "backgroundColor": "black" }}
-                onClick={signInWithGoogle}
+                style={{ backgroundColor: "black" }}
+                onClick={() => signInWithProvider(googleProvider)}
                 type="submit"
                 fullWidth
                 variant="contained"

@@ -8,7 +8,7 @@ const Chat = () => {
   return (
     <div className="chat">
       <div className="chatInfo">
-        <span>{data.user?.displayName}</span>
+        <span className="pr-2">{data.user?.displayName}</span>
       </div>
       <div className="chatMessages">
         <Messages />

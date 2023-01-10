@@ -84,7 +84,7 @@ const Search = () => {
       <div className="searchForm">
         <input
           type="text"
-          placeholder="Find a user try saif"
+          placeholder="Find a user"
           onChange={(e) => setUsername(e.target.value)}
           value={username}
         />
