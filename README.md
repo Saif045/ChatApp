@@ -19,7 +19,7 @@ Clone the repository
 
 Copy code
 
-git clone https://github.com/YOUR_USERNAME/chat-app.git
+git clone https://github.com/Saif045/ChatApp.git
 
 Install dependencies
 
